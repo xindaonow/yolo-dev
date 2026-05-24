@@ -1,0 +1,49 @@
+// Copy to <project>/.devcontainer/devcontainer.json for any project.
+//
+// Unified bind-host model:
+//   - The project mounts at its REAL host path (${localWorkspaceFolder}), so
+//     Claude/Codex history — which is bucketed by absolute cwd — lines up with
+//     whatever you ran on the host. /resume sees the same conversations.
+//   - ~/.claude and ~/.codex are bind-mounted from the host, so login + history
+//     are ONE shared state across host and every container. No re-login, no
+//     migration. Work in the container when you want to YOLO; work on the host
+//     when you want manual control — same conversation either way.
+//   - Package caches stay as Linux-only named volumes (NOT bound from host) to
+//     avoid mixing macOS and Linux native build artifacts.
+//
+// Don't run `claude` on the SAME project from host and container at the same
+// time — two processes writing one .jsonl will conflict. Serial use is fine.
+{
+  "name": "${localWorkspaceFolderBasename}",
+  "image": "yolo-dev:latest",
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+  "workspaceFolder": "${localWorkspaceFolder}",
+
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
+  "containerEnv": {
+    "SHELL": "/bin/bash"
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind",
+    "source=${localEnv:HOME}/dev-inbox,target=/home/vscode/dev-inbox,type=bind,readonly",
+    "source=yolo-npm-cache,target=/home/vscode/.npm,type=volume",
+    "source=yolo-bun-cache,target=/home/vscode/.bun/install/cache,type=volume",
+    "source=yolo-uv-cache,target=/home/vscode/.cache/uv,type=volume",
+    "source=yolo-pip-cache,target=/home/vscode/.cache/pip,type=volume"
+  ],
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python"
+      ]
+    }
+  }
+}
