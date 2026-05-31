@@ -19,6 +19,10 @@ permissions:
   id-token: write                  # for build provenance
   attestations: write              # attach provenance attestation
 
+# Run JS-based actions on Node 24 (Node 20 is deprecated on runners).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
