@@ -1,0 +1,31 @@
+{
+  "name": "${localWorkspaceFolderBasename}",
+  "image": "ghcr.io/xindaonow/yolo-dev:latest",
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+  "workspaceFolder": "${localWorkspaceFolder}",
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
+  "containerEnv": {
+    "SHELL": "/bin/bash"
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",
+    "source=${localEnv:HOME}/.codex,target=/home/vscode/.codex,type=bind",
+    "source=${localEnv:HOME}/dev-inbox,target=/home/vscode/dev-inbox,type=bind,readonly",
+    "source=yolo-npm-cache,target=/home/vscode/.npm,type=volume",
+    "source=yolo-bun-cache,target=/home/vscode/.bun/install/cache,type=volume",
+    "source=yolo-uv-cache,target=/home/vscode/.cache/uv,type=volume",
+    "source=yolo-pip-cache,target=/home/vscode/.cache/pip,type=volume"
+  ],
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python"
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+name: build-image
+
+# Build yolo-dev in the cloud and push a multi-arch, signed image to GHCR
+# (ghcr.io/<owner>/yolo-dev). Anyone can pull it — no local build needed.
+on:
+  push:
+    branches: [main]
+    paths:                         # only rebuild when the image actually changes
+      - '.devcontainer/Dockerfile'
+      - '.devcontainer/init-firewall.sh'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:               # manual "Run workflow" button
+  schedule:
+    - cron: '0 6 * * *'            # daily 06:00 UTC — pull newest Claude/Codex
+
+permissions:
+  contents: read
+  packages: write                  # push to GHCR
+  id-token: write                  # for build provenance
+  attestations: write              # attach provenance attestation
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3      # enables arm64 emulation
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .devcontainer
+          push: true
+          platforms: linux/amd64,linux/arm64   # covers Apple Silicon + x86 Linux
+          tags: ghcr.io/${{ github.repository }}:latest
+          build-args: |
+            CLI_REBUILD=${{ github.run_number }}
+          provenance: mode=max                 # build provenance attestation
+          sbom: true                           # software bill of materials

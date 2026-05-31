@@ -1,69 +1,60 @@
 # YOLO AI Coding Dev Container
 
-烤进 node / python / bun / uv / claude code / codex 的 Docker 镜像,和 host 共享同一份 Claude/Codex 状态。
+预装 node / python / bun / uv / claude code / codex 的 Docker 镜像,与 host 共享同一份 Claude / Codex 状态。在隔离容器中以 `--dangerously-skip-permissions` 运行 AI coding。
 
-> ⚠️ 别同时在 host 和容器里对同一个项目跑 `claude`(会抢写同一份 `.jsonl`)。串行用没问题。
+镜像由 GitHub Actions 多架构构建(amd64 + arm64)并发布到 `ghcr.io/xindaonow/yolo-dev:latest`,直接拉取使用,无需本地构建。
 
-## 一次性准备
+> ⚠️ 请勿同时在 host 与容器中对同一项目运行 `claude`,两者会写入同一份 `.jsonl`。顺序使用无此问题。
 
-```bash
-cd ~/Code/dev-setup
-./build.sh         # 构建 yolo-dev:latest 镜像
-```
+## 快速开始
 
-前提:Docker Desktop 已运行,host 上已登录过 Claude / Codex(容器直接复用,不用再登录)。
+需 Docker + VS Code + Dev Containers 扩展(Windows 用 WSL2,项目置于 WSL 文件系统内)。host 上需已登录 Claude / Codex(容器复用其登录状态),并创建收件箱 `mkdir -p ~/dev-inbox`。
 
-## 新项目 / 已有项目 都一样
-
-下面的步骤对**新项目和已有项目通用**——同一个模板。已有项目(之前在 host 上跑过 claude 的)进容器后,旧对话会自动出现在 `/resume` 里,因为模板把项目挂在 host 真实路径、并 bind 了 host 的 `~/.claude`。
-
-## 用 VS Code
+在项目目录下获取配置:
 
 ```bash
-mkdir -p ~/Code/my-project/.devcontainer
-cp ~/Code/dev-setup/templates/devcontainer.json ~/Code/my-project/.devcontainer/
-code ~/Code/my-project
+mkdir -p .devcontainer
+curl -fsSL https://raw.githubusercontent.com/xindaonow/yolo-dev/main/templates/devcontainer.remote.json \
+  -o .devcontainer/devcontainer.json
 ```
 
-`Cmd+Shift+P` → **Dev Containers: Reopen in Container**,然后 terminal 里直接:
+**用 VS Code:** `code .` → `Cmd+Shift+P` → **Dev Containers: Reopen in Container**
+
+**用命令行:**
+
+```bash
+npm install -g @devcontainers/cli      # 一次性安装
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . bash
+```
+
+容器内运行:
 
 ```bash
 claude --dangerously-skip-permissions
 # 或 codex
 ```
 
-## 用命令行
+首次进入时 Docker 按机器架构自动拉取镜像。已有项目(此前在 host 上运行过 claude)进入容器后,旧对话出现在 `/resume` 中——模板将项目挂载在 host 真实路径,并 bind 了 host 的 `~/.claude`。
 
-```bash
-npm install -g @devcontainers/cli      # 一次性安装
-
-mkdir -p ~/Code/my-project/.devcontainer
-cp ~/Code/dev-setup/templates/devcontainer.json ~/Code/my-project/.devcontainer/
-cd ~/Code/my-project
-
-devcontainer up --workspace-folder .            # 启动
-devcontainer exec --workspace-folder . bash     # 进 shell
-```
-
-进入后直接 `claude` / `codex`。
+## 常用操作
 
 - 关闭容器:`docker ps --filter "label=devcontainer.local_folder=$PWD" --format '{{.ID}}' | xargs -r docker stop`
-- 重建容器(改了 devcontainer.json 后):`devcontainer up --workspace-folder . --remove-existing-container`
+- 重建容器(修改 devcontainer.json 后):`devcontainer up --workspace-folder . --remove-existing-container`
+- 出口防火墙(容器内手动启用,仅放行 Anthropic / OpenAI / npm / pypi / GitHub 等):`sudo /usr/local/bin/init-firewall.sh`
 
-## 更新 Claude / Codex 版本
+---
 
-镜像装的是**构建时最新版**(self-update 已关,所以运行时不会变)。要升级,直接重建镜像:
+## 本地构建镜像(维护者)
 
-```bash
-cd ~/Code/dev-setup && ./build.sh
-```
-
-重建后,已存在的项目容器要 rebuild 才用新版(VS Code: `Rebuild Container`;CLI: `--remove-existing-container`)。
-
-## 可选:出口防火墙
-
-容器内手动启用(只放行 Anthropic / OpenAI / npm / pypi / GitHub 等):
+修改镜像内容(Dockerfile、防火墙白名单、CLI 版本)时,clone 本仓库后本地构建:
 
 ```bash
-sudo /usr/local/bin/init-firewall.sh
+cd ~/Code/dev-setup
+./build.sh                 # 构建 yolo-dev:latest
+./build.sh --latest        # 强制拉取最新 Claude / Codex
 ```
+
+本地构建后用 `templates/devcontainer.json`(image 为本地 `yolo-dev:latest`)。CLI 版本固定在构建时(self-update 已关闭),升级需重建镜像并 rebuild 容器(VS Code `Rebuild Container`,或 CLI `--remove-existing-container`)。
+
+镜像内容:node LTS、python 3.12、bun、uv、claude code、codex,以及 7 天依赖 cooldown(`min-release-age` / `minimumReleaseAge`)。
