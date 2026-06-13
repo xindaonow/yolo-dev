@@ -27,6 +27,9 @@
   "containerEnv": {
     "SHELL": "/bin/bash"
   },
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": ""
+  },
 
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind",

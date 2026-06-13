@@ -47,16 +47,21 @@ USER vscode
 # Make sure user-level package manager dirs exist before volumes mount on top
 RUN mkdir -p /home/vscode/.npm /home/vscode/.bun/install/cache \
              /home/vscode/.cache/uv /home/vscode/.cache/pip \
-             /home/vscode/.claude /home/vscode/.codex
+             /home/vscode/.claude /home/vscode/.codex \
+             /home/vscode/.local/share/codex
 
 # AI coding CLIs — Claude Code + Codex via their official native installers,
-# into ~/.local/bin (on PATH above). No npm: avoids the platform-native
-# optional-dep dance that `npm install -g` requires for Claude.
+# into ~/.local/bin (on PATH above). Install Codex's standalone package outside
+# ~/.codex because devcontainer users bind-mount ~/.codex for auth/history, and
+# that mount would otherwise hide the Linux binary package baked into the image.
+# No npm: avoids the platform-native optional-dep dance that `npm install -g`
+# requires for Claude.
 # CLI_REBUILD busts this layer so `./build.sh --latest` pulls the newest of both.
 ARG CLI_REBUILD=0
 RUN echo "rebuild ${CLI_REBUILD}" \
     && curl -fsSL https://claude.ai/install.sh | bash \
-    && curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh
+    && curl -fsSL https://chatgpt.com/codex/install.sh | \
+       CODEX_NON_INTERACTIVE=1 CODEX_HOME=/home/vscode/.local/share/codex sh
 
 # Supply-chain hardening: minimum release age (dependency cooldown).
 # Refuse to install package versions younger than 7 days — most malicious
